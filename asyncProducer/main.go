@@ -9,40 +9,33 @@ import (
 )
 
 var (
-	kafkaBrokers = []string{"localhost:9092"}
-	KafkaTopic   = "sarama_topic"
-	enqueued     int
+	enqueued int
 )
 
 func main() {
 
-	producer, err := setupProducer()
+	config := sarama.NewConfig()
+
+	producer, err := sarama.NewAsyncProducer([]string{"localhost:9092"}, config)
 	if err != nil {
 		panic(err)
-	} else {
-		log.Println("Kafka AsyncProducer up and running!")
 	}
+	defer producer.Close()
 
 	// Graceful shutdown.
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
-	produceMessages(producer, signals)
+	sendMessage(producer, signals)
 
-	log.Printf("Kafka AsyncProducer finished with %d messages produced.", enqueued)
 }
 
-func setupProducer() (sarama.AsyncProducer, error) {
-	config := sarama.NewConfig()
-	return sarama.NewAsyncProducer(kafkaBrokers, config)
-}
-
-func produceMessages(producer sarama.AsyncProducer, signals chan os.Signal) {
+func sendMessage(producer sarama.AsyncProducer, signals chan os.Signal) {
 
 	for {
 
 		time.Sleep(time.Second)
-		message := &sarama.ProducerMessage{Topic: KafkaTopic, Value: sarama.StringEncoder("testing 123")}
+		message := &sarama.ProducerMessage{Topic: "example", Value: sarama.StringEncoder("event message ...")}
 
 		select {
 		case producer.Input() <- message:
